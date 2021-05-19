@@ -1,7 +1,9 @@
 library panels;
 
 import 'dart:math';
+import 'dart:ui';
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 
@@ -64,33 +66,49 @@ class _PanelsManagerState extends State<PanelsManager> {
   }
 
   void populateWithDebugPanels() {
-    for(int i = 0; i < 10; i++) {
-      addPanel(
-        widget: Center(
-          child: Text("Panel $i!"),
-        ),
-        title: "Panel $i"
-      );
+    for(int j = 0; j < 5; j++) {
+      List<Widget> widgets = [];
+      List<String> titles = [];
+
+      for(int i = 0; i < 4; i++) {
+        widgets.add(Center(
+          child: Text("Panel $j - $i!"),
+        ));
+        titles.add(
+          "Panel $j - $i"
+        );
+      }
+
+      addPanels(widgets: widgets, titles: titles);
     }
+  }
+
+  void addPanels({
+    required List<Widget> widgets,
+    required List<String?> titles
+  }) {
+    var key = GlobalKey();
+
+    setState(() {
+      var newPanel = PanelWrapper(
+        key: key,
+        titles: titles,
+        children: widgets
+      );
+
+      panelsMap[key] = newPanel;
+      currentPanels = panelsMap.values.toList();
+    });
   }
 
   void addPanel({
     required Widget widget,
     String? title
   }) {
-    print("Adding new panel: '$title'");
-    var key = GlobalKey();
-
-    setState(() {
-      var newPanel = PanelWrapper(
-        key: key,
-        title: title,
-        children: [widget, widget, widget]
-      );
-
-      panelsMap[key] = newPanel;
-      currentPanels = panelsMap.values.toList();
-    });
+    addPanels(
+      widgets: [widget],
+      titles: [title]
+    );
   }
 
   void selectPanel(Key key) {
@@ -129,29 +147,30 @@ class _PanelsManagerState extends State<PanelsManager> {
 class PanelWrapper extends StatefulWidget {
   final Key key;
   final List<Widget> children;
-  final String? title;
+  final List<String?> titles;
   final Size size;
 
   PanelWrapper({
     required this.key,
     required this.children,
     this.size = const Size(500, 500),
-    this.title
-  }) : super(key: key);
+    this.titles = const []
+  }) : assert(titles.length == children.length), super(key: key);
 
   @override
   _PanelWrapperState createState() => _PanelWrapperState();
 }
 
-class _PanelWrapperState extends State<PanelWrapper> {
+class _PanelWrapperState extends State<PanelWrapper> with SingleTickerProviderStateMixin{
 
   late Size size;
   late Offset position = Offset(0, 0);
   bool dragged = false;
   int currentChildIndex = 0;
+  late TabController tabController;
 
   Size setSizeGetDelta(double width, double height) {
-    var newSize = Size(min(max(100, width), 1000), min(max(100, height), 1000));
+    var newSize = Size(max(100, width), max(100, height));
     var delta = Size(size.width - newSize.width, size.height - newSize.height);
     size = newSize;
     return delta;
@@ -186,7 +205,17 @@ class _PanelWrapperState extends State<PanelWrapper> {
   @override
   void initState() {
     size = widget.size;
+    tabController = TabController(
+      length: widget.children.length,
+      vsync: this
+    );
     super.initState();
+  }
+
+  @override
+  void dispose() {
+    tabController.dispose();
+    super.dispose();
   }
 
   @override
@@ -203,6 +232,29 @@ class _PanelWrapperState extends State<PanelWrapper> {
 
     var resizeBorderWidth = 6.0;
     var resizeCornerWidth = 8.0;
+    var i = -1;
+    var tabList = widget.children.map((e) {
+      i++;
+      return AnimatedContainer(
+        duration: Duration(milliseconds: 500),
+        curve: Curves.fastOutSlowIn,
+        constraints: i == tabController.index ?
+        BoxConstraints(
+          maxWidth: 1000
+        ) :
+        BoxConstraints(
+          maxWidth: 80
+        ),
+        child: Text(
+          widget.titles[i] ?? "Panel",
+          textAlign: TextAlign.center,
+          overflow: TextOverflow.ellipsis,
+          style: Theme.of(context).textTheme.bodyText1,
+        ),
+      );
+    }).toList();
+
+    var index = -1;
 
     var centralListener = Listener(
       behavior: HitTestBehavior.translucent,
@@ -212,13 +264,14 @@ class _PanelWrapperState extends State<PanelWrapper> {
         // * Window
         child: Column(
           children: [
+
             // * Draggable Top-bar
             Container(
               child: MouseRegion(
                 opaque: false,
                 cursor: SystemMouseCursors.move,
                 child: Listener(
-                  behavior: HitTestBehavior.opaque,
+                  behavior: HitTestBehavior.deferToChild,
                   onPointerDown: (event) => setState(() {
                     dragged = true;
                     Panels.of(context).selectPanel(widget.key);
@@ -227,40 +280,62 @@ class _PanelWrapperState extends State<PanelWrapper> {
                     dragged = false;
                   }),
                   onPointerMove: (event) => setState(() {
-                    position += event.delta;
+                    if(dragged) position += event.delta;
                   }),
                   child: Container(
-                    height: 30,
-                    color: Colors.green,
+                    color: HSVColor.fromColor(Theme.of(context).canvasColor).withValue(HSVColor.fromColor(Theme.of(context).canvasColor).value * 0.95).withAlpha(0.9).toColor(),
                     child: Row(
                       children: [
-                        Expanded(
-                          flex: 20,
-                          child: ListView(
-                            physics: NeverScrollableScrollPhysics(),
-                            scrollDirection: Axis.horizontal,
-                            children: widget.children.map((element) {
-                              return Container(
-                                margin: EdgeInsets.symmetric(horizontal: 1),
-                                child: Material(
-                                  color: Theme.of(context).canvasColor.withOpacity(0.3),
-                                  child: InkWell(
-                                    onTap: () {},
-                                    child: Container(
-                                      padding: EdgeInsets.symmetric(horizontal: 4),
-                                      child: Row(
-                                        children: [
-                                          Text(widget.title ?? "Panel"),
-                                          Icon(Icons.more_vert, size: 16)
-                                        ],
-                                      ),
-                                    ),
-                                  ),
+                        AnimatedSwitcher(
+                          duration: Duration(milliseconds: 0),
+                          child: !(size.width < 200)
+                            ? ConstrainedBox(
+                              constraints: BoxConstraints(
+                                maxWidth: max(size.width/1.64, 10),
+                              ),
+                              child: Container(
+                                margin: EdgeInsets.all(1),
+                                decoration: BoxDecoration(
+                                  border: Border.all(color: Theme.of(context).textTheme.bodyText1?.color?.withOpacity(0.1) ?? Colors.black)
                                 ),
-                              );
-                            }).toList()
-                          ),
+                                child: TabBar(
+                                  indicatorColor: Theme.of(context).textTheme.bodyText1?.color,
+
+                                  indicatorSize: TabBarIndicatorSize.label,
+                                  dragStartBehavior: DragStartBehavior.down,
+                                  isScrollable: true,
+                                  controller: tabController,
+                                  labelPadding: EdgeInsets.symmetric(horizontal: 10),
+                                  tabs: tabList,
+                                ),
+                              )
+                            )
+                            : Container()
                         ),
+
+                        PopupMenuButton<String>(
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(5))),
+                          tooltip: "Context Menu",
+                          child: Center(
+                            child: Icon(Icons.more_vert, size: 19.0),
+                          ),
+                          initialValue: widget.titles[tabController.index],
+                          onSelected: (String value) {
+                            tabController.animateTo(widget.titles.indexOf(value));
+                          },
+                          itemBuilder: (context) {
+                            return widget.titles.map((String? title) {
+                              return PopupMenuItem<String>(
+                                height: 10.0,
+                                // enabled: title != widget.titles[tabController.index],
+                                value: title ?? "Panel",
+                                child: Text(title ?? "Panel"),
+                              );
+                            }).toList();
+                          },
+                        ),
+
+
                         Spacer(flex: 1),
 
                         Row(
@@ -268,7 +343,7 @@ class _PanelWrapperState extends State<PanelWrapper> {
                           mainAxisSize: MainAxisSize.max,
                           children: [
                             Container(
-                              margin: EdgeInsets.all(3),
+                              margin: EdgeInsets.all(5),
                               child: ClipOval(
                                 child: Material(
                                   color: Theme.of(context).errorColor,
@@ -276,9 +351,9 @@ class _PanelWrapperState extends State<PanelWrapper> {
                                   child: InkWell(
                                     onTap: () => Panels.of(context).removePanel(widget.key),
                                     child: Container(
-                                      padding: EdgeInsets.all(2),
+                                      padding: EdgeInsets.all(3),
                                       child: Center(
-                                        child: Icon(Icons.close, size: 9.0,),
+                                        child: Icon(Icons.close, size: 9.0, color: Colors.white,),
                                       ),
                                     ),
                                   ),
@@ -286,7 +361,7 @@ class _PanelWrapperState extends State<PanelWrapper> {
                               ),
                             ),
                           ],
-                        )
+                        ),
                       ],
                     ),
                   ),
@@ -296,7 +371,11 @@ class _PanelWrapperState extends State<PanelWrapper> {
 
             // * Content
             Expanded(
-              child: widget.children[currentChildIndex]
+              child: TabBarView(
+                controller: tabController,
+                physics: BouncingScrollPhysics(),
+                children: widget.children,
+              )
             )
           ],
         )
@@ -321,6 +400,7 @@ class _PanelWrapperState extends State<PanelWrapper> {
                     resizeUp(event.delta);
                     resizeLeft(event.delta);
                   },
+                  onPointerDown: (event) => Panels.of(context).selectPanel(widget.key),
                 ),
               ),
             ),
@@ -336,6 +416,7 @@ class _PanelWrapperState extends State<PanelWrapper> {
                   child: GestureDetector(
                     behavior: HitTestBehavior.translucent,
                     onVerticalDragUpdate: (event) => resizeUp(event.delta),
+                    onVerticalDragStart: (event) => Panels.of(context).selectPanel(widget.key),
                   ),
                 ),
               ),
@@ -355,6 +436,7 @@ class _PanelWrapperState extends State<PanelWrapper> {
                     resizeUp(event.delta);
                     resizeRight(event.delta);
                   },
+                  onPointerDown: (event) => Panels.of(context).selectPanel(widget.key),
                 ),
               ),
             ),
@@ -374,6 +456,7 @@ class _PanelWrapperState extends State<PanelWrapper> {
                   child: GestureDetector(
                     behavior: HitTestBehavior.translucent,
                     onHorizontalDragUpdate: (event) => resizeLeft(event.delta),
+                    onHorizontalDragStart: (event) => Panels.of(context).selectPanel(widget.key),
                   ),
                 ),
               ),
@@ -392,6 +475,7 @@ class _PanelWrapperState extends State<PanelWrapper> {
                   child: GestureDetector(
                     behavior: HitTestBehavior.translucent,
                     onHorizontalDragUpdate: (event) => resizeRight(event.delta),
+                    onHorizontalDragStart: (event) => Panels.of(context).selectPanel(widget.key),
                   ),
                 ),
               ),
@@ -416,6 +500,7 @@ class _PanelWrapperState extends State<PanelWrapper> {
                     resizeDown(event.delta);
                     resizeLeft(event.delta);
                   },
+                  onPointerDown: (event) => Panels.of(context).selectPanel(widget.key),
                 ),
               ),
             ),
@@ -431,6 +516,7 @@ class _PanelWrapperState extends State<PanelWrapper> {
                   child: GestureDetector(
                     behavior: HitTestBehavior.translucent,
                     onVerticalDragUpdate: (event) => resizeDown(event.delta),
+                    onVerticalDragStart: (event) => Panels.of(context).selectPanel(widget.key),
                   ),
                 ),
               ),
@@ -450,6 +536,7 @@ class _PanelWrapperState extends State<PanelWrapper> {
                     resizeDown(event.delta);
                     resizeRight(event.delta);
                   },
+                  onPointerDown: (event) => Panels.of(context).selectPanel(widget.key),
                 ),
               ),
             ),
