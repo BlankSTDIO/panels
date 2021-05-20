@@ -22,7 +22,8 @@ Panels is a flutter package that aims to provide a set of useful desktop UI pane
 (The theme is determined through `Theme.of(context)`, so set the theme in your `MaterialApp(theme: ThemeData.light()/dark()))`
 
 ## Under the hood
-There are 10 Mouse Regions and listeners (All sides and corners + The big one in the middle + the draggable) that change the look of the mouse according to their function. Windows can be clicked on in any of these regions to become selcted (put on top).
+There are 10 Mouse Regions and listeners (All sides and corners + The big one in the middle + the draggable) that change the look of the mouse according to their function. Windows can be clicked on in any of these regions to become selected (put on top).
+
 ![ezgif com-gif-maker (1)](https://user-images.githubusercontent.com/19771356/118943590-0eb3fc00-b954-11eb-9a5f-50dc9f5fbc3d.gif)
 
 There is an InheritedWidget called `Panels` which is created by a StatefulWidget called `PanelsManager`.
