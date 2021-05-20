@@ -8,13 +8,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:panels/themes.dart';
 
-
-typedef AddPanelCallback = void Function({ required Widget widget, String? title });
-typedef AddPanelWithTabsCallback = void Function({ required List<Widget> widgets, required List<String?> titles });
+typedef AddPanelCallback = void Function({required Widget widget, String? title});
+typedef AddPanelWithTabsCallback = void Function({required List<Widget> widgets, required List<String?> titles});
 typedef PanelKeyCallback = void Function(Key key);
 
 class Panels extends InheritedWidget {
-
   final AddPanelCallback addPanel;
   final AddPanelWithTabsCallback addPanelWithTabs;
   final PanelKeyCallback removePanel;
@@ -39,18 +37,12 @@ class Panels extends InheritedWidget {
   }
 }
 
-
 class PanelsManager extends StatefulWidget {
   final List<Widget>? children;
   final bool debug;
   final PanelsThemeData? themeData;
 
-  PanelsManager({
-    Key? key,
-    this.debug = false,
-    this.children,
-    this.themeData
-  }) : super(key: key);
+  PanelsManager({Key? key, this.debug = false, this.children, this.themeData}) : super(key: key);
 
   @override
   _PanelsManagerState createState() => _PanelsManagerState();
@@ -66,63 +58,45 @@ class _PanelsManagerState extends State<PanelsManager> {
     populateWithDebugPanels();
 
     widget.children?.forEach((child) {
-      addPanel(
-        widget: child,
-        title: "Panel"
-      );
+      addPanel(widget: child, title: "Panel");
     });
 
     super.initState();
   }
 
   void populateWithDebugPanels() {
-    for(int j = 0; j < 5; j++) {
+    for (int j = 0; j < 5; j++) {
       List<Widget> widgets = [];
       List<String> titles = [];
 
-      for(int i = 0; i < 4; i++) {
+      for (int i = 0; i < 4; i++) {
         widgets.add(Center(
           child: Text("Panel $j - $i!"),
         ));
-        titles.add(
-          "Panel $j - $i"
-        );
+        titles.add("Panel $j - $i");
       }
 
       addPanelWithTabs(widgets: widgets, titles: titles);
     }
   }
 
-  void addPanelWithTabs({
-    required List<Widget> widgets,
-    required List<String?> titles
-  }) {
+  void addPanelWithTabs({required List<Widget> widgets, required List<String?> titles}) {
     var key = GlobalKey();
 
     setState(() {
-      var newPanel = Panel(
-        key: key,
-        titles: titles,
-        children: widgets
-      );
+      var newPanel = Panel(key: key, titles: titles, children: widgets);
 
       panelsMap[key] = newPanel;
       currentPanels = panelsMap.values.toList();
     });
   }
 
-  void addPanel({
-    required Widget widget,
-    String? title
-  }) {
-    addPanelWithTabs(
-      widgets: [widget],
-      titles: [title]
-    );
+  void addPanel({required Widget widget, String? title}) {
+    addPanelWithTabs(widgets: [widget], titles: [title]);
   }
 
   void selectPanel(Key key) {
-    if(panelsMap.containsKey(key)) {
+    if (panelsMap.containsKey(key)) {
       setState(() {
         var window = panelsMap.remove(key);
         currentPanels = panelsMap.values.toList();
@@ -133,7 +107,7 @@ class _PanelsManagerState extends State<PanelsManager> {
   }
 
   void removePanel(Key key) {
-    if(panelsMap.containsKey(key)) {
+    if (panelsMap.containsKey(key)) {
       setState(() {
         panelsMap.remove(key);
         currentPanels = panelsMap.values.toList();
@@ -143,7 +117,7 @@ class _PanelsManagerState extends State<PanelsManager> {
 
   @override
   Widget build(BuildContext context) {
-    if(currentPanels.length > 0) currentlySelectedPanelKey = currentPanels.last.key;
+    if (currentPanels.length > 0) currentlySelectedPanelKey = currentPanels.last.key;
 
     var panels = Panels(
       addPanel: addPanel,
@@ -156,11 +130,8 @@ class _PanelsManagerState extends State<PanelsManager> {
       ),
     );
 
-    if(PanelsTheme.of(context) == null) {
-      return PanelsTheme(
-        child: panels,
-        data: widget.themeData ?? PanelsThemeData()
-      );
+    if (PanelsTheme.of(context) == null) {
+      return PanelsTheme(child: panels, data: widget.themeData ?? PanelsThemeData());
     }
 
     return panels;
@@ -173,18 +144,15 @@ class Panel extends StatefulWidget {
   final List<String?> titles;
   final Size size;
 
-  Panel({
-    required this.key,
-    required this.children,
-    this.size = const Size(500, 500),
-    this.titles = const []
-  }) : assert(titles.length == children.length), super(key: key);
+  Panel({required this.key, required this.children, this.size = const Size(500, 500), this.titles = const []})
+      : assert(titles.length == children.length),
+        super(key: key);
 
   @override
   PanelState createState() => PanelState();
 }
 
-class PanelState extends State<Panel> with SingleTickerProviderStateMixin{
+class PanelState extends State<Panel> with SingleTickerProviderStateMixin {
   late Size size;
   late Offset position = Offset(0, 0);
   bool dragged = false;
@@ -202,7 +170,7 @@ class PanelState extends State<Panel> with SingleTickerProviderStateMixin{
   }
 
   void resizeUp(Offset requestedDelta) {
-    if(!selected) return;
+    if (!selected) return;
     setState(() {
       var d = setSizeGetDelta(size.width, size.height - requestedDelta.dy);
       position += Offset(0.0, d.height);
@@ -210,14 +178,14 @@ class PanelState extends State<Panel> with SingleTickerProviderStateMixin{
   }
 
   void resizeDown(Offset requestedDelta) {
-    if(!selected) return;
+    if (!selected) return;
     setState(() {
       setSizeGetDelta(size.width, size.height + requestedDelta.dy);
     });
   }
 
   void resizeLeft(Offset requestedDelta) {
-    if(!selected) return;
+    if (!selected) return;
     setState(() {
       var d = setSizeGetDelta(size.width - requestedDelta.dx, size.height);
       position += Offset(d.width, 0.0);
@@ -225,7 +193,7 @@ class PanelState extends State<Panel> with SingleTickerProviderStateMixin{
   }
 
   void resizeRight(Offset requestedDelta) {
-    if(!selected) return;
+    if (!selected) return;
     setState(() {
       setSizeGetDelta(size.width + requestedDelta.dx, size.height);
     });
@@ -234,10 +202,7 @@ class PanelState extends State<Panel> with SingleTickerProviderStateMixin{
   @override
   void initState() {
     size = widget.size;
-    tabController = TabController(
-      length: widget.children.length,
-      vsync: this
-    );
+    tabController = TabController(length: widget.children.length, vsync: this);
     super.initState();
   }
 
@@ -246,7 +211,6 @@ class PanelState extends State<Panel> with SingleTickerProviderStateMixin{
     tabController.dispose();
     super.dispose();
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -259,13 +223,7 @@ class PanelState extends State<Panel> with SingleTickerProviderStateMixin{
       return AnimatedContainer(
         duration: Duration(milliseconds: 500),
         curve: Curves.fastOutSlowIn,
-        constraints: i == tabController.index ?
-        BoxConstraints(
-          maxWidth: 1000
-        ) :
-        BoxConstraints(
-          maxWidth: 80
-        ),
+        constraints: i == tabController.index ? BoxConstraints(maxWidth: 1000) : BoxConstraints(maxWidth: 80),
         child: Text(
           widget.titles[i] ?? "Panel",
           textAlign: TextAlign.center,
@@ -290,49 +248,39 @@ class PanelState extends State<Panel> with SingleTickerProviderStateMixin{
             dragged = false;
           }),
           onPointerMove: (event) => setState(() {
-            if(dragged) position += event.delta;
+            if (dragged) position += event.delta;
           }),
           child: Container(
             color: HSVColor.fromColor(Theme.of(context).canvasColor).withValue(HSVColor.fromColor(Theme.of(context).canvasColor).value * 0.95).withAlpha(0.9).toColor(),
             child: Row(
               children: [
                 AnimatedSwitcher(
-                  duration: Duration(milliseconds: 0),
-                  child: !(size.width < 200)
-                    ? ConstrainedBox(
-                      constraints: BoxConstraints(
-                        maxWidth: max(size.width/1.64, 10),
-                      ),
-                      child: Container(
-                        margin: EdgeInsets.all(1),
-                        decoration: BoxDecoration(
-                          border: Border.all(color: Theme.of(context).textTheme.bodyText1?.color?.withOpacity(0.1) ?? Colors.black)
-                        ),
-                        child: TabBar(
-                          indicatorColor: Theme.of(context).textTheme.bodyText1?.color,
-
-                          indicatorSize: TabBarIndicatorSize.label,
-                          dragStartBehavior: DragStartBehavior.down,
-                          isScrollable: true,
-                          controller: tabController,
-                          labelPadding: EdgeInsets.symmetric(horizontal: 10),
-                          tabs: tabList,
-                        ),
-                      )
-                    )
-                    : Container()
-                ),
-
+                    duration: Duration(milliseconds: 0),
+                    child: !(size.width < 200)
+                        ? ConstrainedBox(
+                            constraints: BoxConstraints(
+                              maxWidth: max(size.width / 1.64, 10),
+                            ),
+                            child: Container(
+                              margin: EdgeInsets.all(1),
+                              decoration: BoxDecoration(border: Border.all(color: Theme.of(context).textTheme.bodyText1?.color?.withOpacity(0.1) ?? Colors.black)),
+                              child: TabBar(
+                                indicatorColor: Theme.of(context).textTheme.bodyText1?.color,
+                                indicatorSize: TabBarIndicatorSize.label,
+                                dragStartBehavior: DragStartBehavior.down,
+                                isScrollable: true,
+                                controller: tabController,
+                                labelPadding: EdgeInsets.symmetric(horizontal: 10),
+                                tabs: tabList,
+                              ),
+                            ))
+                        : Container()),
                 theme.contextMenuBuilder(context, this),
-
                 Spacer(flex: 1),
-
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   mainAxisSize: MainAxisSize.max,
-                  children: [
-                    theme.closeButtonBuilder(context, () => Panels.of(context).removePanel(widget.key))
-                  ],
+                  children: [theme.closeButtonBuilder(context, () => Panels.of(context).removePanel(widget.key))],
                 ),
               ],
             ),
@@ -342,26 +290,21 @@ class PanelState extends State<Panel> with SingleTickerProviderStateMixin{
     );
 
     var content = Expanded(
-      child: TabBarView(
-        controller: tabController,
-        physics: BouncingScrollPhysics(),
-        children: widget.children,
-      )
-    );
+        child: TabBarView(
+      controller: tabController,
+      physics: BouncingScrollPhysics(),
+      children: widget.children,
+    ));
 
     var centralListener = Listener(
       behavior: HitTestBehavior.translucent,
       onPointerDown: (event) => Panels.of(context).selectPanel(widget.key),
       child: Container(
 
-        // * Window
-        child: Column(
-          children: [
-            topBar,
-            content
-          ],
-        )
-      ),
+          // * Window
+          child: Column(
+        children: [topBar, content],
+      )),
     );
 
     var sideListeners = Column(
@@ -424,7 +367,6 @@ class PanelState extends State<Panel> with SingleTickerProviderStateMixin{
             ),
           ],
         ),
-
         Expanded(
           child: Row(
             children: [
@@ -461,11 +403,9 @@ class PanelState extends State<Panel> with SingleTickerProviderStateMixin{
                   ),
                 ),
               ),
-
             ],
           ),
         ),
-
         Row(
           children: [
             // * Resize Bottom Left
@@ -524,7 +464,6 @@ class PanelState extends State<Panel> with SingleTickerProviderStateMixin{
             ),
           ],
         ),
-
       ],
     );
 
@@ -534,19 +473,9 @@ class PanelState extends State<Panel> with SingleTickerProviderStateMixin{
       child: SizedBox.fromSize(
         size: size,
         child: Stack(
-          children: [
-            Positioned.fill(
-              child: Container(
-                padding: EdgeInsets.all(theme.resizeBorderWidth),
-                child: theme.frameBuilder(context, this, centralListener)
-              )
-            ),
-
-            sideListeners
-          ],
+          children: [Positioned.fill(child: Container(padding: EdgeInsets.all(theme.resizeBorderWidth), child: theme.frameBuilder(context, this, centralListener))), sideListeners],
         ),
       ),
     );
   }
 }
-
