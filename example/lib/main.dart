@@ -21,7 +21,7 @@ class Example extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       body: PanelsTheme(
-        data: FrostedPanelsThemeData(), // PanelsThemeData()
+        data: PanelsThemeData(), // FrostedPanelsThemeData()
         child: PanelsManager(children: [MyCustomWidget()]),
       ),
     );
