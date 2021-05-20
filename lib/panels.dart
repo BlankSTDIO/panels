@@ -90,7 +90,7 @@ class _PanelsManagerState extends State<PanelsManager> {
     var key = GlobalKey();
 
     setState(() {
-      var newPanel = PanelWrapper(
+      var newPanel = Panel(
         key: key,
         titles: titles,
         children: widgets
@@ -144,13 +144,13 @@ class _PanelsManagerState extends State<PanelsManager> {
   }
 }
 
-class PanelWrapper extends StatefulWidget {
+class Panel extends StatefulWidget {
   final Key key;
   final List<Widget> children;
   final List<String?> titles;
   final Size size;
 
-  PanelWrapper({
+  Panel({
     required this.key,
     required this.children,
     this.size = const Size(500, 500),
@@ -158,10 +158,10 @@ class PanelWrapper extends StatefulWidget {
   }) : assert(titles.length == children.length), super(key: key);
 
   @override
-  _PanelWrapperState createState() => _PanelWrapperState();
+  _PanelState createState() => _PanelState();
 }
 
-class _PanelWrapperState extends State<PanelWrapper> with SingleTickerProviderStateMixin{
+class _PanelState extends State<Panel> with SingleTickerProviderStateMixin{
 
   late Size size;
   late Offset position = Offset(0, 0);
@@ -231,7 +231,7 @@ class _PanelWrapperState extends State<PanelWrapper> with SingleTickerProviderSt
     });
 
     var resizeBorderWidth = 6.0;
-    var resizeCornerWidth = 8.0;
+    var resizeCornerWidth = 10.0;
     var i = -1;
     var tabList = widget.children.map((e) {
       i++;
