@@ -29,7 +29,7 @@ Panels is a flutter package that aims to provide a set of useful desktop UI pane
 ## FrostedPanelsTheme
 | ThemeData.light() | ThemeData.dark() |
 |:-----------------:|:----------------:|
-|![image]()         |![image]()        |
+|![image](https://user-images.githubusercontent.com/19771356/118982039-50a46880-b97b-11eb-8f8e-f753fe7c1224.png)|![image](https://user-images.githubusercontent.com/19771356/118981945-366a8a80-b97b-11eb-9fee-043f2b534d91.png)|
 ## Under the hood
 There are 10 Mouse Regions and listeners (All sides and corners + The big one in the middle + the draggable) that change the look of the mouse according to their function. Windows can be clicked on in any of these regions to become selected (put on top).
 
