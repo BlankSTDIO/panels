@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:panels/panels.dart';
+import 'package:panels/themes.dart';
 
 void main() {
   runApp(ExampleApplication());
@@ -11,7 +12,7 @@ class ExampleApplication extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       theme: ThemeData.dark().copyWith(
-        primaryColor: Colors.green
+        primaryColor: Colors.purpleAccent
       ),
       home: Example(),
     );
@@ -23,10 +24,13 @@ class Example extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: PanelsManager(
-        children: [
-          MyCustomWidget()
-        ]
+      body: PanelsTheme(
+        data: FrostedPanelsThemeData(), // PanelsThemeData()
+        child: PanelsManager(
+          children: [
+            MyCustomWidget()
+          ]
+        ),
       ),
     );
   }

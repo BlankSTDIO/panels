@@ -6,41 +6,50 @@ import 'dart:ui';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
+import 'package:panels/themes.dart';
 
 
 typedef AddPanelCallback = void Function({ required Widget widget, String? title });
+typedef AddPanelWithTabsCallback = void Function({ required List<Widget> widgets, required List<String?> titles });
 typedef PanelKeyCallback = void Function(Key key);
 
 class Panels extends InheritedWidget {
 
   final AddPanelCallback addPanel;
+  final AddPanelWithTabsCallback addPanelWithTabs;
   final PanelKeyCallback removePanel;
   final PanelKeyCallback selectPanel;
+  final Key? currentlySelectedPanelKey;
 
   Panels({
     Key? key,
     required Widget child,
     required this.addPanel,
+    required this.addPanelWithTabs,
     required this.removePanel,
-    required this.selectPanel
+    required this.selectPanel,
+    required this.currentlySelectedPanelKey,
   }) : super(key: key, child: child);
 
   static Panels of(BuildContext context) => context.dependOnInheritedWidgetOfExactType<Panels>()!;
 
   @override
-  bool updateShouldNotify(covariant InheritedWidget oldWidget) {
-    // TODO: implement updateShouldNotify
-    return true;
+  bool updateShouldNotify(Panels oldWidget) {
+    return currentlySelectedPanelKey != oldWidget.currentlySelectedPanelKey;
   }
 }
 
 
 class PanelsManager extends StatefulWidget {
   final List<Widget>? children;
+  final bool debug;
+  final PanelsThemeData? themeData;
 
   PanelsManager({
     Key? key,
-    this.children
+    this.debug = false,
+    this.children,
+    this.themeData
   }) : super(key: key);
 
   @override
@@ -50,6 +59,7 @@ class PanelsManager extends StatefulWidget {
 class _PanelsManagerState extends State<PanelsManager> {
   List<Widget> currentPanels = [];
   Map<Key, Widget> panelsMap = Map<Key, Widget>();
+  late Key? currentlySelectedPanelKey;
 
   @override
   void initState() {
@@ -79,11 +89,11 @@ class _PanelsManagerState extends State<PanelsManager> {
         );
       }
 
-      addPanels(widgets: widgets, titles: titles);
+      addPanelWithTabs(widgets: widgets, titles: titles);
     }
   }
 
-  void addPanels({
+  void addPanelWithTabs({
     required List<Widget> widgets,
     required List<String?> titles
   }) {
@@ -105,7 +115,7 @@ class _PanelsManagerState extends State<PanelsManager> {
     required Widget widget,
     String? title
   }) {
-    addPanels(
+    addPanelWithTabs(
       widgets: [widget],
       titles: [title]
     );
@@ -133,14 +143,27 @@ class _PanelsManagerState extends State<PanelsManager> {
 
   @override
   Widget build(BuildContext context) {
-    return Panels(
+    if(currentPanels.length > 0) currentlySelectedPanelKey = currentPanels.last.key;
+
+    var panels = Panels(
       addPanel: addPanel,
+      addPanelWithTabs: addPanelWithTabs,
       removePanel: removePanel,
       selectPanel: selectPanel,
+      currentlySelectedPanelKey: currentlySelectedPanelKey,
       child: Stack(
         children: currentPanels,
       ),
     );
+
+    if(PanelsTheme.of(context) == null) {
+      return PanelsTheme(
+        child: panels,
+        data: widget.themeData ?? PanelsThemeData()
+      );
+    }
+
+    return panels;
   }
 }
 
@@ -158,14 +181,16 @@ class Panel extends StatefulWidget {
   }) : assert(titles.length == children.length), super(key: key);
 
   @override
-  _PanelState createState() => _PanelState();
+  PanelState createState() => PanelState();
 }
 
-class _PanelState extends State<Panel> with SingleTickerProviderStateMixin{
-
+class PanelState extends State<Panel> with SingleTickerProviderStateMixin{
   late Size size;
   late Offset position = Offset(0, 0);
   bool dragged = false;
+
+  bool get selected => widget.key == Panels.of(context).currentlySelectedPanelKey;
+
   int currentChildIndex = 0;
   late TabController tabController;
 
@@ -177,6 +202,7 @@ class _PanelState extends State<Panel> with SingleTickerProviderStateMixin{
   }
 
   void resizeUp(Offset requestedDelta) {
+    if(!selected) return;
     setState(() {
       var d = setSizeGetDelta(size.width, size.height - requestedDelta.dy);
       position += Offset(0.0, d.height);
@@ -184,12 +210,14 @@ class _PanelState extends State<Panel> with SingleTickerProviderStateMixin{
   }
 
   void resizeDown(Offset requestedDelta) {
+    if(!selected) return;
     setState(() {
       setSizeGetDelta(size.width, size.height + requestedDelta.dy);
     });
   }
 
   void resizeLeft(Offset requestedDelta) {
+    if(!selected) return;
     setState(() {
       var d = setSizeGetDelta(size.width - requestedDelta.dx, size.height);
       position += Offset(d.width, 0.0);
@@ -197,6 +225,7 @@ class _PanelState extends State<Panel> with SingleTickerProviderStateMixin{
   }
 
   void resizeRight(Offset requestedDelta) {
+    if(!selected) return;
     setState(() {
       setSizeGetDelta(size.width + requestedDelta.dx, size.height);
     });
@@ -221,18 +250,9 @@ class _PanelState extends State<Panel> with SingleTickerProviderStateMixin{
 
   @override
   Widget build(BuildContext context) {
-    var random = Random(1335);
-    var debug = false; // * Toggle to show border colors. Will be removed in release
-    var debugColors = List.generate(10, (index) {
-      if(debug) {
-        return Color.fromRGBO(random.nextInt(255), random.nextInt(255), random.nextInt(255), 1.0/(index + 1).toDouble());
-      }
+    var theme = PanelsTheme.of(context)!.data;
+    var debugColors = theme.debugColors;
 
-      return Colors.transparent;
-    });
-
-    var resizeBorderWidth = 6.0;
-    var resizeCornerWidth = 10.0;
     var i = -1;
     var tabList = widget.children.map((e) {
       i++;
@@ -255,7 +275,79 @@ class _PanelState extends State<Panel> with SingleTickerProviderStateMixin{
       );
     }).toList();
 
-    var index = -1;
+    // * Draggable Top-bar
+    var topBar = Container(
+      child: MouseRegion(
+        opaque: false,
+        cursor: SystemMouseCursors.move,
+        child: Listener(
+          behavior: HitTestBehavior.deferToChild,
+          onPointerDown: (event) => setState(() {
+            dragged = true;
+            Panels.of(context).selectPanel(widget.key);
+          }),
+          onPointerUp: (event) => setState(() {
+            dragged = false;
+          }),
+          onPointerMove: (event) => setState(() {
+            if(dragged) position += event.delta;
+          }),
+          child: Container(
+            color: HSVColor.fromColor(Theme.of(context).canvasColor).withValue(HSVColor.fromColor(Theme.of(context).canvasColor).value * 0.95).withAlpha(0.9).toColor(),
+            child: Row(
+              children: [
+                AnimatedSwitcher(
+                  duration: Duration(milliseconds: 0),
+                  child: !(size.width < 200)
+                    ? ConstrainedBox(
+                      constraints: BoxConstraints(
+                        maxWidth: max(size.width/1.64, 10),
+                      ),
+                      child: Container(
+                        margin: EdgeInsets.all(1),
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Theme.of(context).textTheme.bodyText1?.color?.withOpacity(0.1) ?? Colors.black)
+                        ),
+                        child: TabBar(
+                          indicatorColor: Theme.of(context).textTheme.bodyText1?.color,
+
+                          indicatorSize: TabBarIndicatorSize.label,
+                          dragStartBehavior: DragStartBehavior.down,
+                          isScrollable: true,
+                          controller: tabController,
+                          labelPadding: EdgeInsets.symmetric(horizontal: 10),
+                          tabs: tabList,
+                        ),
+                      )
+                    )
+                    : Container()
+                ),
+
+                theme.contextMenuBuilder(context, this),
+
+                Spacer(flex: 1),
+
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  mainAxisSize: MainAxisSize.max,
+                  children: [
+                    theme.closeButtonBuilder(context, () => Panels.of(context).removePanel(widget.key))
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    var content = Expanded(
+      child: TabBarView(
+        controller: tabController,
+        physics: BouncingScrollPhysics(),
+        children: widget.children,
+      )
+    );
 
     var centralListener = Listener(
       behavior: HitTestBehavior.translucent,
@@ -265,119 +357,8 @@ class _PanelState extends State<Panel> with SingleTickerProviderStateMixin{
         // * Window
         child: Column(
           children: [
-
-            // * Draggable Top-bar
-            Container(
-              child: MouseRegion(
-                opaque: false,
-                cursor: SystemMouseCursors.move,
-                child: Listener(
-                  behavior: HitTestBehavior.deferToChild,
-                  onPointerDown: (event) => setState(() {
-                    dragged = true;
-                    Panels.of(context).selectPanel(widget.key);
-                  }),
-                  onPointerUp: (event) => setState(() {
-                    dragged = false;
-                  }),
-                  onPointerMove: (event) => setState(() {
-                    if(dragged) position += event.delta;
-                  }),
-                  child: Container(
-                    color: HSVColor.fromColor(Theme.of(context).canvasColor).withValue(HSVColor.fromColor(Theme.of(context).canvasColor).value * 0.95).withAlpha(0.9).toColor(),
-                    child: Row(
-                      children: [
-                        AnimatedSwitcher(
-                          duration: Duration(milliseconds: 0),
-                          child: !(size.width < 200)
-                            ? ConstrainedBox(
-                              constraints: BoxConstraints(
-                                maxWidth: max(size.width/1.64, 10),
-                              ),
-                              child: Container(
-                                margin: EdgeInsets.all(1),
-                                decoration: BoxDecoration(
-                                  border: Border.all(color: Theme.of(context).textTheme.bodyText1?.color?.withOpacity(0.1) ?? Colors.black)
-                                ),
-                                child: TabBar(
-                                  indicatorColor: Theme.of(context).textTheme.bodyText1?.color,
-
-                                  indicatorSize: TabBarIndicatorSize.label,
-                                  dragStartBehavior: DragStartBehavior.down,
-                                  isScrollable: true,
-                                  controller: tabController,
-                                  labelPadding: EdgeInsets.symmetric(horizontal: 10),
-                                  tabs: tabList,
-                                ),
-                              )
-                            )
-                            : Container()
-                        ),
-
-                        PopupMenuButton<String>(
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(5))),
-                          tooltip: "Context Menu",
-                          child: Center(
-                            child: Icon(Icons.more_vert, size: 19.0),
-                          ),
-                          initialValue: widget.titles[tabController.index],
-                          onSelected: (String value) {
-                            tabController.animateTo(widget.titles.indexOf(value));
-                          },
-                          itemBuilder: (context) {
-                            return widget.titles.map((String? title) {
-                              return PopupMenuItem<String>(
-                                height: 10.0,
-                                // enabled: title != widget.titles[tabController.index],
-                                value: title ?? "Panel",
-                                child: Text(title ?? "Panel"),
-                              );
-                            }).toList();
-                          },
-                        ),
-
-
-                        Spacer(flex: 1),
-
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceAround,
-                          mainAxisSize: MainAxisSize.max,
-                          children: [
-                            Container(
-                              margin: EdgeInsets.all(5),
-                              child: ClipOval(
-                                child: Material(
-                                  color: Theme.of(context).errorColor,
-                                  shape: CircleBorder(),
-                                  child: InkWell(
-                                    onTap: () => Panels.of(context).removePanel(widget.key),
-                                    child: Container(
-                                      padding: EdgeInsets.all(3),
-                                      child: Center(
-                                        child: Icon(Icons.close, size: 9.0, color: Colors.white,),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-
-            // * Content
-            Expanded(
-              child: TabBarView(
-                controller: tabController,
-                physics: BouncingScrollPhysics(),
-                children: widget.children,
-              )
-            )
+            topBar,
+            content
           ],
         )
       ),
@@ -389,9 +370,9 @@ class _PanelState extends State<Panel> with SingleTickerProviderStateMixin{
           children: [
             // * Resize Top Left
             Container(
-              width: resizeCornerWidth,
-              height: resizeCornerWidth,
-              color: debugColors[2],
+              width: theme.resizeCornerWidth,
+              height: theme.resizeCornerWidth,
+              color: debugColors?[2],
               child: MouseRegion(
                 opaque: false,
                 cursor: SystemMouseCursors.resizeUpLeft,
@@ -409,13 +390,13 @@ class _PanelState extends State<Panel> with SingleTickerProviderStateMixin{
             // * Resize Top Center
             Expanded(
               child: Container(
-                height: resizeBorderWidth,
-                color: debugColors[6],
+                height: theme.resizeBorderWidth,
+                color: debugColors?[6],
                 child: MouseRegion(
                   opaque: false,
                   cursor: SystemMouseCursors.resizeUpDown,
                   child: GestureDetector(
-                    behavior: HitTestBehavior.translucent,
+                    behavior: HitTestBehavior.opaque,
                     onVerticalDragUpdate: (event) => resizeUp(event.delta),
                     onVerticalDragStart: (event) => Panels.of(context).selectPanel(widget.key),
                   ),
@@ -425,9 +406,9 @@ class _PanelState extends State<Panel> with SingleTickerProviderStateMixin{
 
             // * Resize Top Right
             Container(
-              width: resizeCornerWidth,
-              height: resizeCornerWidth,
-              color: debugColors[2],
+              width: theme.resizeCornerWidth,
+              height: theme.resizeCornerWidth,
+              color: debugColors?[2],
               child: MouseRegion(
                 opaque: false,
                 cursor: SystemMouseCursors.resizeUpRight,
@@ -449,13 +430,13 @@ class _PanelState extends State<Panel> with SingleTickerProviderStateMixin{
             children: [
               // * Resize Left Center
               Container(
-                width: resizeBorderWidth,
-                color: debugColors[5],
+                width: theme.resizeBorderWidth,
+                color: debugColors?[5],
                 child: MouseRegion(
                   opaque: false,
                   cursor: SystemMouseCursors.resizeLeftRight,
                   child: GestureDetector(
-                    behavior: HitTestBehavior.translucent,
+                    behavior: HitTestBehavior.opaque,
                     onHorizontalDragUpdate: (event) => resizeLeft(event.delta),
                     onHorizontalDragStart: (event) => Panels.of(context).selectPanel(widget.key),
                   ),
@@ -468,13 +449,13 @@ class _PanelState extends State<Panel> with SingleTickerProviderStateMixin{
 
               // * Resize Right Center
               Container(
-                width: resizeBorderWidth,
-                color: debugColors[5],
+                width: theme.resizeBorderWidth,
+                color: debugColors?[5],
                 child: MouseRegion(
                   opaque: false,
                   cursor: SystemMouseCursors.resizeLeftRight,
                   child: GestureDetector(
-                    behavior: HitTestBehavior.translucent,
+                    behavior: HitTestBehavior.opaque,
                     onHorizontalDragUpdate: (event) => resizeRight(event.delta),
                     onHorizontalDragStart: (event) => Panels.of(context).selectPanel(widget.key),
                   ),
@@ -489,9 +470,9 @@ class _PanelState extends State<Panel> with SingleTickerProviderStateMixin{
           children: [
             // * Resize Bottom Left
             Container(
-              width: resizeCornerWidth,
-              height: resizeCornerWidth,
-              color: debugColors[2],
+              width: theme.resizeCornerWidth,
+              height: theme.resizeCornerWidth,
+              color: debugColors?[2],
               child: MouseRegion(
                 opaque: false,
                 cursor: SystemMouseCursors.resizeDownLeft,
@@ -509,13 +490,13 @@ class _PanelState extends State<Panel> with SingleTickerProviderStateMixin{
             // * Resize Bottom Center
             Expanded(
               child: Container(
-                height: resizeBorderWidth,
-                color: debugColors[6],
+                height: theme.resizeBorderWidth,
+                color: debugColors?[6],
                 child: MouseRegion(
                   opaque: false,
                   cursor: SystemMouseCursors.resizeUpDown,
                   child: GestureDetector(
-                    behavior: HitTestBehavior.translucent,
+                    behavior: HitTestBehavior.opaque,
                     onVerticalDragUpdate: (event) => resizeDown(event.delta),
                     onVerticalDragStart: (event) => Panels.of(context).selectPanel(widget.key),
                   ),
@@ -525,9 +506,9 @@ class _PanelState extends State<Panel> with SingleTickerProviderStateMixin{
 
             // * Resize Bottom Right
             Container(
-              width: resizeCornerWidth,
-              height: resizeCornerWidth,
-              color: debugColors[2],
+              width: theme.resizeCornerWidth,
+              height: theme.resizeCornerWidth,
+              color: debugColors?[2],
               child: MouseRegion(
                 opaque: false,
                 cursor: SystemMouseCursors.resizeDownRight,
@@ -556,16 +537,8 @@ class _PanelState extends State<Panel> with SingleTickerProviderStateMixin{
           children: [
             Positioned.fill(
               child: Container(
-                padding: EdgeInsets.all(resizeBorderWidth),
-                child: Material(
-                  elevation: dragged ? 5.0 : 2.0,
-                  child: Container(
-                    color: debugColors[9],
-
-                    // * Central Select Listener
-                    child: centralListener
-                  )
-                ),
+                padding: EdgeInsets.all(theme.resizeBorderWidth),
+                child: theme.frameBuilder(context, this, centralListener)
               )
             ),
 

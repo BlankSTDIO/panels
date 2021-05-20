@@ -1,6 +1,6 @@
 name: panels
 description: Panels is a flutter package that aims to provide a set of useful desktop UI panels that can move around, dock and tab like we expect in more robust desktop applications.
-version: 0.0.1
+version: 0.0.2
 
 repository: https://github.com/BlankSTDIO/panels
 homepage: https://github.com/BlankSTDIO/panels
