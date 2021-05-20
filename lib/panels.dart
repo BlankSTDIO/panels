@@ -218,10 +218,11 @@ class _PanelState extends State<Panel> with SingleTickerProviderStateMixin{
     super.dispose();
   }
 
+
   @override
   Widget build(BuildContext context) {
-    var debug = false;
-    var random = Random(1337);
+    var random = Random(1335);
+    var debug = false; // * Toggle to show border colors. Will be removed in release
     var debugColors = List.generate(10, (index) {
       if(debug) {
         return Color.fromRGBO(random.nextInt(255), random.nextInt(255), random.nextInt(255), 1.0/(index + 1).toDouble());

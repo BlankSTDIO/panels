@@ -10,8 +10,8 @@ class ExampleApplication extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      theme: ThemeData.light().copyWith(
-        primaryColor: Colors.red
+      theme: ThemeData.dark().copyWith(
+        primaryColor: Colors.green
       ),
       home: Example(),
     );
@@ -48,7 +48,7 @@ class MyCustomWidget extends StatelessWidget {
             Expanded(
               child: Center(
                 child: MaterialButton(
-                  color: Colors.green,
+                  color: Theme.of(context).primaryColor,
                   onPressed: () {
                     Panels.of(context).addPanel(
                       widget: MyCustomWidget(),
