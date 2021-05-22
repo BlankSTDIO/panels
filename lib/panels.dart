@@ -143,18 +143,24 @@ class Panel extends StatefulWidget {
   final List<Widget> children;
   final List<String?> titles;
   final Size size;
+  final Offset position;
 
-  Panel({required this.key, required this.children, this.size = const Size(500, 500), this.titles = const []})
-      : assert(titles.length == children.length),
+  Panel({
+    required this.key,
+    required this.children,
+    this.size = const Size(500, 500),
+    this.titles = const [],
+    this.position = const Offset(0, 0),
+  }) : assert(titles.length == children.length),
         super(key: key);
 
   @override
   PanelState createState() => PanelState();
 }
 
-class PanelState extends State<Panel> with SingleTickerProviderStateMixin {
+class PanelState extends State<Panel> with TickerProviderStateMixin {
   late Size size;
-  late Offset position = Offset(0, 0);
+  late Offset position;
   bool dragged = false;
 
   bool get selected => widget.key == Panels.of(context).currentlySelectedPanelKey;
@@ -202,6 +208,7 @@ class PanelState extends State<Panel> with SingleTickerProviderStateMixin {
   @override
   void initState() {
     size = widget.size;
+    position = widget.position;
     tabController = TabController(length: widget.children.length, vsync: this);
     super.initState();
   }
@@ -214,21 +221,64 @@ class PanelState extends State<Panel> with SingleTickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
+
     var theme = PanelsTheme.of(context)!.data;
     var debugColors = theme.debugColors;
 
     var i = -1;
     var tabList = widget.children.map((e) {
       i++;
-      return AnimatedContainer(
-        duration: Duration(milliseconds: 500),
-        curve: Curves.fastOutSlowIn,
-        constraints: i == tabController.index ? BoxConstraints(maxWidth: 1000) : BoxConstraints(maxWidth: 80),
-        child: Text(
-          widget.titles[i] ?? "Panel",
-          textAlign: TextAlign.center,
-          overflow: TextOverflow.ellipsis,
-          style: Theme.of(context).textTheme.bodyText1,
+      var constraints = i == tabController.index ? BoxConstraints(maxWidth: 1000) : BoxConstraints(maxWidth: 80);
+
+      return Draggable<Widget>(
+        data: widget.children[i],
+        hitTestBehavior: HitTestBehavior.opaque,
+        onDragEnd: (details) {
+          if(!details.wasAccepted) {
+            Panels.of(context).addPanel(
+              widget: widget.children[i],
+              title: widget.titles[i]
+            );
+
+            if(widget.children.length == 1) {
+              Panels.of(context).removePanel(widget.key);
+            }
+          }
+        },
+        onDragStarted: () {
+          setState(() {
+            dragged = false;
+          });
+        },
+        feedback: Material(
+          child: Text(
+            widget.titles[i] ?? "Panel",
+            textAlign: TextAlign.center,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.bodyText1,
+          ),
+        ),
+        childWhenDragging: AnimatedContainer(
+          duration: Duration(milliseconds: 500),
+          curve: Curves.fastOutSlowIn,
+          constraints: constraints,
+          child: Text(
+            "         ",
+            textAlign: TextAlign.center,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.bodyText1,
+          ),
+        ),
+        child: AnimatedContainer(
+          duration: Duration(milliseconds: 500),
+          curve: Curves.fastOutSlowIn,
+          constraints: constraints,
+          child: Text(
+            widget.titles[i] ?? "Panel",
+            textAlign: TextAlign.center,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.bodyText1,
+          ),
         ),
       );
     }).toList();
@@ -276,6 +326,7 @@ class PanelState extends State<Panel> with SingleTickerProviderStateMixin {
                             ))
                         : Container()),
                 theme.contextMenuBuilder(context, this),
+
                 Spacer(flex: 1),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -473,7 +524,34 @@ class PanelState extends State<Panel> with SingleTickerProviderStateMixin {
       child: SizedBox.fromSize(
         size: size,
         child: Stack(
-          children: [Positioned.fill(child: Container(padding: EdgeInsets.all(theme.resizeBorderWidth), child: theme.frameBuilder(context, this, centralListener))), sideListeners],
+          children: [
+            Positioned.fill(
+              child: Container(
+                padding: EdgeInsets.all(theme.resizeBorderWidth),
+                child: DragTarget<Widget>(
+                  builder: (context, candidateData, rejectedData) {
+                    return theme.frameBuilder(context, this, centralListener);
+                  },
+                  onAccept: (data) {
+                    widget.children.add(data);
+
+                    var newTabController = TabController(
+                      length: widget.children.length,
+                      vsync: this,
+                      initialIndex: tabController.index
+                    );
+                    tabController.dispose();
+
+                    tabController = newTabController;
+                  },
+                  onMove: (details) => print(details),
+                )
+              )
+            ),
+
+            // * Resize handles
+            sideListeners
+          ],
         ),
       ),
     );

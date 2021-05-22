@@ -28,7 +28,15 @@ class Example extends StatelessWidget {
   }
 }
 
-class MyCustomWidget extends StatelessWidget {
+
+class MyCustomWidget extends StatefulWidget {
+  @override
+  _MyCustomWidgetState createState() => _MyCustomWidgetState();
+}
+
+class _MyCustomWidgetState extends State<MyCustomWidget> {
+  int windowsOpened = 0;
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -40,14 +48,22 @@ class MyCustomWidget extends StatelessWidget {
               child: Text("My Custom Widget"),
             ),
           ),
+
+          Expanded(
+            child: Text("This widget has opened $windowsOpened windows."),
+          ),
+
           Expanded(
             child: Center(
               child: MaterialButton(
                 color: Theme.of(context).primaryColor,
                 onPressed: () {
                   Panels.of(context).addPanel(widget: MyCustomWidget(), title: "Opened From MyCustomWidget()");
+                  setState(() {
+                    windowsOpened++;
+                  });
                 },
-                child: Text("Test"),
+                child: Text("Open New Window"),
               ),
             ),
           )
