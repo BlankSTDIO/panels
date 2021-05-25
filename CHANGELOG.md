@@ -4,7 +4,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## [UNRELEASED]
+### Added
+- `Panels.of(context).createAndAddPanel({required Widget widget, required String title})` to construct and add a new panel given a Widget as the tab and the title of that panel
+- `PanelTab()` A new widget to keep track of panels and their titles
 
+### Changed
+- API Changes for `Panels.of(context).addPanel` and `addPanelWithTabs`
 
 
 ## [0.0.3] 2021-05-20

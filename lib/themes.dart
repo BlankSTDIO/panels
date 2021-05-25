@@ -72,23 +72,27 @@ class PanelsThemeData with Diagnosticable {
 
   final PanelStateBuilder contextMenuBuilder;
   static Widget defaultContextMenuBuilder(BuildContext context, PanelState state) {
-    return PopupMenuButton<String>(
+    return PopupMenuButton<Key>(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(5))),
       tooltip: "Context Menu",
       child: Center(
         child: Icon(Icons.more_vert, size: 19.0),
       ),
-      initialValue: state.widget.titles[state.tabController.index],
-      onSelected: (String value) {
-        state.tabController.animateTo(state.widget.titles.indexOf(value));
+      initialValue: state.tabs[state.tabController.index].key,
+      onSelected: (Key value) {
+        for(int i = 0; i < state.tabs.length; i++) {
+          if(state.tabs[i].key == value) {
+            return state.tabController.animateTo(i);
+          }
+        }
       },
       itemBuilder: (context) {
-        return state.widget.titles.map((String? title) {
-          return PopupMenuItem<String>(
+        return state.tabs.map((PanelTab tab) {
+          return PopupMenuItem<Key>(
             height: 10.0,
             // enabled: title != widget.titles[tabController.index],
-            value: title ?? "Panel",
-            child: Text(title ?? "Panel"),
+            value: tab.key,
+            child: Text(tab.title),
           );
         }).toList();
       },
@@ -150,29 +154,36 @@ class FrostedPanelsThemeData extends PanelsThemeData {
   }
 
   static Widget frostedContextMenuBuilder(BuildContext context, PanelState state) {
-    return PopupMenuButton<String>(
+    return PopupMenuButton<Key>(
+      color: Theme.of(context).popupMenuTheme.color?.withOpacity(0.5),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(5))),
       tooltip: "Context Menu",
       child: Center(
         child: Icon(Icons.more_vert, size: 19.0),
       ),
-      initialValue: state.widget.titles[state.tabController.index],
-      onSelected: (String value) {
-        state.tabController.animateTo(state.widget.titles.indexOf(value));
+      initialValue: state.tabs[state.tabController.index].key,
+      onSelected: (Key value) {
+        for(int i = 0; i < state.tabs.length; i++) {
+          if(state.tabs[i].key == value) {
+            return state.tabController.animateTo(i);
+          }
+        }
       },
-      color: Theme.of(context).popupMenuTheme.color?.withOpacity(0.5),
       itemBuilder: (context) {
-        return state.widget.titles.map((String? title) {
-          return PopupMenuItem<String>(
+        return state.tabs.map((PanelTab tab) {
+          return PopupMenuItem<Key>(
             height: 10.0,
             // enabled: title != widget.titles[tabController.index],
-            value: title ?? "Panel",
-            child: Text(title ?? "Panel"),
+            value: tab.key,
+            child: Text(tab.title),
           );
         }).toList();
       },
     );
   }
 
-  FrostedPanelsThemeData() : super(frameBuilder: frostedFrameBuilder, contextMenuBuilder: frostedContextMenuBuilder);
+  FrostedPanelsThemeData() : super(
+    frameBuilder: frostedFrameBuilder,
+    contextMenuBuilder: frostedContextMenuBuilder
+  );
 }
