@@ -36,7 +36,7 @@ There are 10 Mouse Regions and listeners (All sides and corners + The big one in
 ![ezgif com-gif-maker (1)](https://user-images.githubusercontent.com/19771356/118943590-0eb3fc00-b954-11eb-9a5f-50dc9f5fbc3d.gif)
 
 There is an InheritedWidget called `Panels` which is created by a StatefulWidget called `PanelsManager`.
-The children of the panels manager are put into a stack. To add Panels/Windows one can simply do `Panels.of(context).addPanel(widget: Widget, title: "Title of Panel");` to create one from any Widget from anywhere in a context that is a decendant of the `PanelsManager` (`Panels`).
+The children of the panels manager are put into a stack.
 
 Please see the `examples` directory for an example.
 
