@@ -7,10 +7,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 ### Added
 - `Panels.of(context).createAndAddPanel({required Widget widget, required String title})` to construct and add a new panel given a Widget as the tab and the title of that panel
 - `PanelTab()` A new widget to keep track of panels and their titles
+- `childrenOnTop` has been added to the `PanelsManager`. These widgets will be placed in the stack on top of all panels
+- `initialPanels` has been added to the `PanelsManager`. These will be the initial panels.
 
 ### Changed
 - API Changes for `Panels.of(context).addPanel` and `addPanelWithTabs`
-
+- `children` of the panels manager are no longer interpreted as the initial panels. Instead, these will be widget placed in the bottom of the Stack. The functionality has been replaced by `initialPanels`
 
 ## [0.0.3] 2021-05-20
 ### Changed
